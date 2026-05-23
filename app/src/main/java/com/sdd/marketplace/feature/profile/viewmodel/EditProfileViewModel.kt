@@ -14,7 +14,6 @@ data class EditProfileUiState(
     val fullName: String = "",
     val username: String = "",
     val bio: String = "",
-    val phone: String = "",
     val location: String = "",
     val website: String = "",
     val shopName: String = "",
@@ -22,7 +21,6 @@ data class EditProfileUiState(
     val currentAvatarUrl: String? = null,
     val avatarUri: Uri? = null,
     val showEmail: Boolean = false,
-    val showPhone: Boolean = false,
     val showOnlineStatus: Boolean = true,
     val isLoading: Boolean = false,
     val error: String? = null
@@ -57,7 +55,6 @@ class EditProfileViewModel @Inject constructor(
                         fullName = it.fullName,
                         username = it.email?.substringBefore("@") ?: "",
                         bio = it.bio ?: "",
-                        phone = it.phone ?: "",
                         location = it.location ?: "",
                         currentAvatarUrl = it.avatarUrl
                     )
@@ -69,14 +66,12 @@ class EditProfileViewModel @Inject constructor(
     fun updateFullName(value: String) = _uiState.update { it.copy(fullName = value) }
     fun updateUsername(value: String) = _uiState.update { it.copy(username = value.lowercase().replace(" ", "_")) }
     fun updateBio(value: String) = _uiState.update { it.copy(bio = value.take(150)) }
-    fun updatePhone(value: String) = _uiState.update { it.copy(phone = value) }
     fun updateLocation(value: String) = _uiState.update { it.copy(location = value) }
     fun updateWebsite(value: String) = _uiState.update { it.copy(website = value) }
     fun updateShopName(value: String) = _uiState.update { it.copy(shopName = value) }
     fun updateShopDescription(value: String) = _uiState.update { it.copy(shopDescription = value) }
     fun setAvatarUri(uri: Uri) = _uiState.update { it.copy(avatarUri = uri) }
     fun toggleShowEmail() = _uiState.update { it.copy(showEmail = !it.showEmail) }
-    fun toggleShowPhone() = _uiState.update { it.copy(showPhone = !it.showPhone) }
     fun toggleShowOnlineStatus() = _uiState.update { it.copy(showOnlineStatus = !it.showOnlineStatus) }
 
     fun saveProfile() = viewModelScope.launch {
@@ -97,7 +92,6 @@ class EditProfileViewModel @Inject constructor(
             "bio" to state.bio.trim(),
             "location" to state.location.trim()
         )
-        if (state.phone.isNotBlank()) updates["phone"] = state.phone.trim()
 
         userRepository.updateProfile(updates)
             .onSuccess { _events.emit(EditProfileEvent.SaveSuccess) }

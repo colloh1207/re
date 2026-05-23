@@ -51,7 +51,7 @@ object CurrencyUtils {
         CurrencyInfo("COP", "COP$", "Colombian Peso",          3900.0,   0, "🇨🇴"),
         CurrencyInfo("PEN", "S/",   "Peruvian Sol",            3.7,      2, "🇵🇪"),
         CurrencyInfo("VES", "Bs.",  "Venezuelan Bolívar",      36.0,     2, "🇻🇪"),
-        CurrencyInfo("UYU", "$U",   "Uruguayan Peso",          38.0,     2, "🇺🇾"),
+        CurrencyInfo("UYU", "\$U",   "Uruguayan Peso",          38.0,     2, "🇺🇾"),
         CurrencyInfo("BOB", "Bs.",  "Bolivian Boliviano",      6.9,      2, "🇧🇴"),
         CurrencyInfo("PYG", "₲",    "Paraguayan Guaraní",      7300.0,   0, "🇵🇾"),
         CurrencyInfo("GTQ", "Q",    "Guatemalan Quetzal",      7.8,      2, "🇬🇹"),

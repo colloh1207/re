@@ -103,7 +103,7 @@ class SettingsViewModel @Inject constructor(
         }
         _uiState.update { it.copy(isLoading = true, error = null) }
         val email = authRepository.getCurrentUserEmail() ?: ""
-        authRepository.verifyEmailOtp(email, otp, isRecovery = true)
+        authRepository.verifyOtp(email, otp, isEmail = true, isRecovery = true)
             .onSuccess {
                 authRepository.updatePassword(newPassword)
                     .onSuccess { _events.emit(SettingsEvent.ShowMessage("Password changed successfully!")) }

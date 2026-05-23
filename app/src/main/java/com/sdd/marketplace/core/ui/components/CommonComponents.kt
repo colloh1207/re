@@ -83,7 +83,9 @@ fun SddTextField(
     trailingIcon: @Composable (() -> Unit)? = null,
     isPassword: Boolean = false,
     keyboardOptions: androidx.compose.foundation.text.KeyboardOptions = androidx.compose.foundation.text.KeyboardOptions.Default,
-    singleLine: Boolean = true
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+    maxLines: Int = Int.MAX_VALUE
 ) {
     var showPassword by remember { mutableStateOf(false) }
     OutlinedTextField(
@@ -98,7 +100,9 @@ fun SddTextField(
         } else trailingIcon,
         visualTransformation = if (isPassword && !showPassword) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
         keyboardOptions = keyboardOptions,
-        singleLine = singleLine,
+        singleLine = if (minLines > 1) false else singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = SddPink,

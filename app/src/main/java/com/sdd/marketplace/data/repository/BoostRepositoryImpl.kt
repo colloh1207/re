@@ -55,20 +55,22 @@ class BoostRepositoryImpl @Inject constructor(
         tierId: String,
         currency: String
     ): Result<Boost> = runCatching {
-        val response = functions.invoke("create-boost") {
+        val response = functions.invoke(
+            function = "create-boost",
             body = buildJsonObject {
                 put("product_ids", buildJsonArray { productIds.forEach { add(it) } })
                 put("tier_id", tierId)
                 put("currency", currency)
             }
-        }
+        )
         lenientJson.decodeFromString<BoostDto>(response.body()).toDomain()
     }
 
     override suspend fun pollBoostPayment(boostId: String): Result<Boost> = runCatching {
-        val response = functions.invoke("poll-boost-payment") {
+        val response = functions.invoke(
+            function = "poll-boost-payment",
             body = buildJsonObject { put("boost_id", boostId) }
-        }
+        )
         lenientJson.decodeFromString<BoostDto>(response.body()).toDomain()
     }
 

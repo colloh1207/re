@@ -72,7 +72,7 @@ class AuthViewModel @Inject constructor(
         if (!networkChecker.isOnline()) { _uiState.update { it.copy(error = "No internet connection. Please check your network.") }; return@launch }
         _uiState.update { it.copy(isLoading = true, error = null) }
         val state = _uiState.value
-        authRepository.verifyEmailOtp(state.email, otp, state.otpIsForRecovery)
+        authRepository.verifyOtp(state.email, otp, state.isEmailOtp, state.otpIsForRecovery)
             .onSuccess { _events.emit(AuthEvent.NavigateToHome) }
             .onFailure { e -> _uiState.update { it.copy(error = ErrorHandler.friendlyMessage(e)) } }
         _uiState.update { it.copy(isLoading = false) }
@@ -93,7 +93,7 @@ class AuthViewModel @Inject constructor(
         if (password.length < 6) { _uiState.update { it.copy(error = "Password must be at least 6 characters") }; return@launch }
         if (!networkChecker.isOnline()) { _uiState.update { it.copy(error = "No internet connection. Please check your network.") }; return@launch }
         _uiState.update { it.copy(isLoading = true, error = null, email = email, isEmailOtp = true, otpIsForRecovery = false) }
-        authRepository.signUpWithEmail(fullName, email, "", password, referralCode)
+        authRepository.signUpWithEmail(fullName, email, password, referralCode)
             .onSuccess { _events.emit(AuthEvent.NavigateToOtp) }
             .onFailure { e -> _uiState.update { it.copy(error = ErrorHandler.friendlyMessage(e)) } }
         _uiState.update { it.copy(isLoading = false) }

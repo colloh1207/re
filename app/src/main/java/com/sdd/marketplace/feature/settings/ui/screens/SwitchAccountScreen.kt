@@ -172,7 +172,7 @@ private fun AccountCard(
             Column(Modifier.weight(1f)) {
                 Text(account.fullName, fontWeight = FontWeight.SemiBold)
                 Text(
-                    account.email ?: account.phone ?: "Unknown",
+                    account.email ?: "Unknown",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

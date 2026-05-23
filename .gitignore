@@ -1,0 +1,23 @@
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.gradle/
+build/
+app/build/
+*.hprof
+.externalNativeBuild/
+.cxx/
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Project specific
+local.properties
+captures/
+.navigation/
+
+# Replit
+replit.md
+.replit
+.config/

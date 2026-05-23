@@ -5,7 +5,7 @@ import com.sdd.marketplace.data.remote.dto.*
 import com.sdd.marketplace.domain.model.*
 
 fun UserDto.toDomain() = User(
-    id = id, fullName = fullName, email = email, phone = phone,
+    id = id, fullName = fullName, email = email,
     avatarUrl = avatarUrl, bio = bio, isVerified = isVerified,
     isSeller = isSeller, rating = rating, reviewCount = reviewCount,
     followerCount = followerCount, followingCount = followingCount,
@@ -107,7 +107,7 @@ fun ProductEntity.toDomain() = Product(
     images = imagesJson.split(",").filter { it.isNotBlank() },
     tags = tagsJson.split(",").filter { it.isNotBlank() },
     attributes = emptyMap(), sellerId = sellerId,
-    seller = User(id = sellerId, fullName = sellerName, email = null, phone = null,
+    seller = User(id = sellerId, fullName = sellerName, email = null,
         avatarUrl = sellerAvatarUrl, bio = null, isVerified = sellerIsVerified, isSeller = true,
         rating = 0.0, reviewCount = 0, followerCount = 0, followingCount = 0,
         productCount = 0, soldCount = 0, responseRate = 0, location = null,
@@ -136,7 +136,7 @@ fun Message.toEntity() = MessageEntity(
 
 fun MessageEntity.toDomain() = Message(
     id = id, chatId = chatId, senderId = senderId,
-    sender = User(id = senderId, fullName = senderName, email = null, phone = null,
+    sender = User(id = senderId, fullName = senderName, email = null,
         avatarUrl = senderAvatarUrl, bio = null, isVerified = false, isSeller = false,
         rating = 0.0, reviewCount = 0, followerCount = 0, followingCount = 0,
         productCount = 0, soldCount = 0, responseRate = 0, location = null,

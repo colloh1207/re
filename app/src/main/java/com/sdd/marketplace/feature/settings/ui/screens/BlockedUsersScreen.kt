@@ -180,7 +180,7 @@ private fun BlockedUserCard(
                     maxLines = 1
                 )
                 Text(
-                    "@${user?.username ?: block.blockedId.take(8)}",
+                    "@${user?.fullName?.replace(" ", "")?.lowercase() ?: block.blockedId.take(8)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

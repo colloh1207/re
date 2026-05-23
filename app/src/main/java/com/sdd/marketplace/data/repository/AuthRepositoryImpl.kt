@@ -63,42 +63,34 @@ class AuthRepositoryImpl @Inject constructor(
         user
     }
 
-    override suspend fun signInWithPhone(phone: String): Result<Unit> = runCatching {
+    override suspend fun verifyOtp(
+        emailOrPhone: String,
+        otp: String,
+        isEmail: Boolean,
+        isRecovery: Boolean
+    ): Result<User> = runCatching {
         networkChecker.requireOnline().getOrThrow()
         try {
-            auth.signInWith(Phone) { this.phone = phone }
-        } catch (e: Exception) {
-            throw Exception(ErrorHandler.friendlyMessage(e))
-        }
-    }
-
-    override suspend fun verifyOtp(phone: String, otp: String): Result<User> = runCatching {
-        networkChecker.requireOnline().getOrThrow()
-        try {
-            auth.verifyPhoneOtp(type = OtpType.Phone.SMS, phone = phone, token = otp)
-        } catch (e: Exception) {
-            throw Exception(ErrorHandler.friendlyMessage(e))
-        }
-        val userId = auth.currentUserOrNull()?.id
-            ?: throw Exception("OTP verification failed. Please try again.")
-        fetchUserProfile(userId) ?: ensureUserProfile(userId, phone = phone)
-    }
-
-    override suspend fun verifyEmailOtp(email: String, otp: String, isRecovery: Boolean): Result<User> = runCatching {
-        networkChecker.requireOnline().getOrThrow()
-        val type = if (isRecovery) OtpType.Email.Recovery else OtpType.Email.Signup
-        try {
-            auth.verifyEmailOtp(type = type, email = email, token = otp)
+            if (isEmail) {
+                val type = if (isRecovery) OtpType.Email.RECOVERY else OtpType.Email.SIGNUP
+                auth.verifyEmailOtp(type = type, email = emailOrPhone, token = otp)
+            } else {
+                auth.verifyPhoneOtp(type = OtpType.Phone.SMS, phone = emailOrPhone, token = otp)
+            }
         } catch (e: Exception) {
             throw Exception(ErrorHandler.friendlyMessage(e))
         }
         val userId = auth.currentUserOrNull()?.id
             ?: throw Exception("OTP verification failed. Please try again.")
-        fetchUserProfile(userId) ?: ensureUserProfile(userId, email = email)
+        if (isEmail) {
+            fetchUserProfile(userId) ?: ensureUserProfile(userId, email = emailOrPhone)
+        } else {
+            fetchUserProfile(userId) ?: ensureUserProfile(userId)
+        }
     }
 
     override suspend fun signUpWithEmail(
-        fullName: String, email: String, phone: String, password: String, referralCode: String?
+        fullName: String, email: String, password: String, referralCode: String?
     ): Result<User> = runCatching {
         networkChecker.requireOnline().getOrThrow()
         try {
@@ -107,7 +99,6 @@ class AuthRepositoryImpl @Inject constructor(
                 this.password = password
                 data = buildJsonObject {
                     put("full_name", fullName)
-                    if (phone.isNotBlank()) put("phone", phone)
                 }
             }
         } catch (e: Exception) {
@@ -118,7 +109,7 @@ class AuthRepositoryImpl @Inject constructor(
             ?: auth.currentSessionOrNull()?.user?.id
 
         if (userId != null) {
-            val user = ensureUserProfile(userId, fullName = fullName, email = email, phone = phone)
+            val user = ensureUserProfile(userId, fullName = fullName, email = email)
             if (!referralCode.isNullOrBlank()) {
                 applyReferralCode(referralCode)
             }
@@ -127,24 +118,12 @@ class AuthRepositoryImpl @Inject constructor(
         } else {
             User(
                 id = "pending_verification",
-                fullName = fullName, email = email, phone = phone,
+                fullName = fullName, email = email,
                 avatarUrl = null, bio = null, isVerified = false, isSeller = true,
                 rating = 0.0, reviewCount = 0, followerCount = 0, followingCount = 0,
                 productCount = 0, soldCount = 0, responseRate = 100, location = null,
                 joinedAt = "", isOnline = false, lastSeen = null
             )
-        }
-    }
-
-    override suspend fun signUpWithPhone(fullName: String, phone: String): Result<Unit> = runCatching {
-        networkChecker.requireOnline().getOrThrow()
-        try {
-            auth.signUpWith(Phone) {
-                this.phone = phone
-                data = buildJsonObject { put("full_name", fullName) }
-            }
-        } catch (e: Exception) {
-            throw Exception(ErrorHandler.friendlyMessage(e))
         }
     }
 
@@ -183,7 +162,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun resendEmailOtp(email: String): Result<Unit> = runCatching {
         networkChecker.requireOnline().getOrThrow()
         try {
-            auth.resendEmail(OtpType.Email.Signup, email)
+            auth.resendEmail(OtpType.Email.SIGNUP, email)
         } catch (e: Exception) {
             throw Exception(ErrorHandler.friendlyMessage(e))
         }
@@ -273,7 +252,6 @@ class AuthRepositoryImpl @Inject constructor(
                 SavedAccountEntity(
                     userId = user.id,
                     email = user.email,
-                    phone = user.phone,
                     fullName = user.fullName,
                     avatarUrl = user.avatarUrl,
                     isActive = true
@@ -298,19 +276,19 @@ class AuthRepositoryImpl @Inject constructor(
 
     private suspend fun ensureUserProfile(
         userId: String, fullName: String = "User",
-        email: String? = null, phone: String? = null
+        email: String? = null
     ): User {
         val existing = fetchUserProfile(userId)
         if (existing != null) return existing
 
-        val username = (email?.substringBefore("@") ?: phone?.takeLast(4) ?: "user").lowercase()
+        val username = (email?.substringBefore("@") ?: "user").lowercase()
             .replace(Regex("[^a-z0-9_]"), "_")
 
         val referralCode = "SDD-${userId.take(6).uppercase()}"
 
         val newUser = mapOf(
             "id" to userId, "full_name" to fullName,
-            "email" to email, "phone" to phone,
+            "email" to email,
             "username" to username, "referral_code" to referralCode,
             "is_verified" to false, "is_seller" to true,
             "rating" to 0.0, "review_count" to 0,
@@ -324,7 +302,7 @@ class AuthRepositoryImpl @Inject constructor(
             Timber.e(e, "Error creating user profile")
         }
         return fetchUserProfile(userId) ?: User(
-            id = userId, fullName = fullName, email = email, phone = phone,
+            id = userId, fullName = fullName, email = email,
             avatarUrl = null, bio = null, isVerified = false, isSeller = true,
             rating = 0.0, reviewCount = 0, followerCount = 0, followingCount = 0,
             productCount = 0, soldCount = 0, responseRate = 100, location = null,

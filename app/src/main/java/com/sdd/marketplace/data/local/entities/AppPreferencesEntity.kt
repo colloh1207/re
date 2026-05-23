@@ -14,7 +14,6 @@ data class AppPreferencesEntity(
 data class SavedAccountEntity(
     @PrimaryKey val userId: String,
     val email: String?,
-    val phone: String?,
     val fullName: String,
     val avatarUrl: String?,
     val isActive: Boolean = false,

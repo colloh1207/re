@@ -95,10 +95,6 @@ fun EditProfileScreen(
 
             Text("Contact Information", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))
-            SddTextField(value = uiState.phone, onValueChange = { viewModel.updatePhone(it) }, label = "Phone Number",
-                leadingIcon = { Icon(Icons.Outlined.Phone, "Phone") },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone))
-            Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = uiState.location, onValueChange = { viewModel.updateLocation(it) },
                 label = { Text("Location") },
@@ -130,12 +126,6 @@ fun EditProfileScreen(
                         headlineContent = { Text("Show Email Address") },
                         supportingContent = { Text("Other users can see your email") },
                         trailingContent = { Switch(checked = uiState.showEmail, onCheckedChange = { viewModel.toggleShowEmail() }, colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = SddPink)) }
-                    )
-                    Divider(Modifier.padding(horizontal = 16.dp))
-                    ListItem(
-                        headlineContent = { Text("Show Phone Number") },
-                        supportingContent = { Text("Other users can see your phone") },
-                        trailingContent = { Switch(checked = uiState.showPhone, onCheckedChange = { viewModel.toggleShowPhone() }, colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = SddPink)) }
                     )
                     Divider(Modifier.padding(horizontal = 16.dp))
                     ListItem(

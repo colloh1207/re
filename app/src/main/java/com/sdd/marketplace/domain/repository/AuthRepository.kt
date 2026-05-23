@@ -7,11 +7,8 @@ interface AuthRepository {
     val currentUser: Flow<User?>
     val isAuthenticated: Flow<Boolean>
     suspend fun signInWithEmail(email: String, password: String): Result<User>
-    suspend fun signInWithPhone(phone: String): Result<Unit>
-    suspend fun verifyOtp(phone: String, otp: String): Result<User>
-    suspend fun verifyEmailOtp(email: String, otp: String, isRecovery: Boolean): Result<User>
-    suspend fun signUpWithEmail(fullName: String, email: String, phone: String, password: String, referralCode: String? = null): Result<User>
-    suspend fun signUpWithPhone(fullName: String, phone: String): Result<Unit>
+    suspend fun verifyOtp(emailOrPhone: String, otp: String, isEmail: Boolean = true, isRecovery: Boolean = false): Result<User>
+    suspend fun signUpWithEmail(fullName: String, email: String, password: String, referralCode: String? = null): Result<User>
     suspend fun signInAnonymously(): Result<User>
     suspend fun signOut(): Result<Unit>
     suspend fun sendPasswordResetEmail(email: String): Result<Unit>

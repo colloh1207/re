@@ -4,7 +4,6 @@ data class User(
     val id: String,
     val fullName: String,
     val email: String?,
-    val phone: String?,
     val avatarUrl: String?,
     val bio: String?,
     val isVerified: Boolean,

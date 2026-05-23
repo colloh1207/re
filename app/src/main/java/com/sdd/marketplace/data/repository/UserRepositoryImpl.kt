@@ -148,7 +148,7 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     private fun UserDto.toEntity() = UserEntity(
-        id = id, fullName = fullName, email = email, phone = phone, avatarUrl = avatarUrl, bio = bio,
+        id = id, fullName = fullName, email = email, avatarUrl = avatarUrl, bio = bio,
         isVerified = isVerified, isSeller = isSeller, rating = rating, reviewCount = reviewCount,
         followerCount = followerCount, followingCount = followingCount, productCount = productCount,
         soldCount = soldCount, responseRate = responseRate, location = location,
@@ -156,7 +156,7 @@ class UserRepositoryImpl @Inject constructor(
     )
 
     private fun UserEntity.toDomain() = User(
-        id = id, fullName = fullName, email = email, phone = phone, avatarUrl = avatarUrl, bio = bio,
+        id = id, fullName = fullName, email = email, avatarUrl = avatarUrl, bio = bio,
         isVerified = isVerified, isSeller = isSeller, rating = rating, reviewCount = reviewCount,
         followerCount = followerCount, followingCount = followingCount, productCount = productCount,
         soldCount = soldCount, responseRate = responseRate, location = location,
