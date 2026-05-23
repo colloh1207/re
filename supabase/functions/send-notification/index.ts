@@ -7,11 +7,15 @@ const corsHeaders = {
 };
 
 interface NotificationPayload {
-  userId: string;
-  type: "message" | "order" | "offer" | "rating" | "follow" | "sale" | "kyc" | "general";
+  // Accept both camelCase and snake_case for backward compatibility
+  userId?: string;
+  user_id?: string;
+  type: "message" | "order" | "offer" | "rating" | "follow" | "sale" | "kyc" | "general" |
+        "MESSAGE" | "ORDER_UPDATE" | "OFFER" | "REVIEW" | "FOLLOW" | "SALE" | "SYSTEM";
   title: string;
   body: string;
   referenceId?: string;
+  reference_id?: string;
   data?: Record<string, string>;
 }
 
@@ -28,20 +32,27 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
     const payload: NotificationPayload = await req.json();
 
-    if (!payload.userId || !payload.type || !payload.title) {
+    // Accept both camelCase and snake_case userId / referenceId
+    const userId = payload.userId ?? payload.user_id ?? "";
+    const referenceId = payload.referenceId ?? payload.reference_id ?? null;
+
+    if (!userId || !payload.type || !payload.title) {
       return new Response(
-        JSON.stringify({ error: "userId, type, and title are required" }),
+        JSON.stringify({ error: "userId (or user_id), type, and title are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 1. Store notification in DB
+    // Map caller type to the schema CHECK constraint values
+    const dbType = toSchemaType(payload.type);
+
+    // 1. Store notification in DB (schema uses column "body", not "message")
     const { error: insertError } = await supabase.from("notifications").insert({
-      user_id: payload.userId,
-      type: payload.type,
+      user_id: userId,
+      type: dbType,
       title: payload.title,
-      message: payload.body,
-      reference_id: payload.referenceId ?? null,
+      body: payload.body,
+      reference_id: referenceId,
       is_read: false,
     });
     if (insertError) console.error("Failed to insert notification:", insertError.message);
@@ -50,7 +61,7 @@ serve(async (req) => {
     const { data: user } = await supabase
       .from("users")
       .select("fcm_token, notification_settings")
-      .eq("id", payload.userId)
+      .eq("id", userId)
       .single();
 
     if (!user) {
@@ -78,13 +89,14 @@ serve(async (req) => {
     }
 
     // 4. Send push via FCM
-    const isHighPriority = ["message", "offer"].includes(payload.type);
+    const typeLower = payload.type.toLowerCase();
+    const isHighPriority = typeLower === "message" || typeLower === "offer";
     const fcmPayload = {
       to: fcmToken,
       notification: { title: payload.title, body: payload.body },
       data: {
-        type: payload.type,
-        reference_id: payload.referenceId ?? "",
+        type: typeLower,
+        reference_id: referenceId ?? "",
         title: payload.title,
         body: payload.body,
         ...(payload.data ?? {}),
@@ -93,7 +105,7 @@ serve(async (req) => {
       android: {
         priority: isHighPriority ? "high" : "normal",
         notification: {
-          channel_id: getChannelId(payload.type),
+          channel_id: getChannelId(typeLower),
           sound: "default",
         },
       },
@@ -110,7 +122,7 @@ serve(async (req) => {
     if (fcmResult.failure > 0) {
       console.error("FCM delivery failed:", JSON.stringify(fcmResult));
       if (fcmResult.results?.[0]?.error === "NotRegistered") {
-        await supabase.from("users").update({ fcm_token: null }).eq("id", payload.userId);
+        await supabase.from("users").update({ fcm_token: null }).eq("id", userId);
       }
     }
 
@@ -127,24 +139,38 @@ serve(async (req) => {
   }
 });
 
+/** Map incoming type string to the CHECK constraint values in the notifications table. */
+function toSchemaType(type: string): string {
+  switch (type.toLowerCase()) {
+    case "message":                    return "MESSAGE";
+    case "order": case "order_update": return "ORDER_UPDATE";
+    case "offer":                      return "OFFER";
+    case "rating": case "review":      return "REVIEW";
+    case "follow":                     return "FOLLOW";
+    case "sale":                       return "SALE";
+    case "kyc": case "system":         return "SYSTEM";
+    default:                           return "SYSTEM";
+  }
+}
+
 function isTypeEnabled(type: string, settings: Record<string, boolean>): boolean {
-  switch (type) {
-    case "message":          return settings.messages !== false;
-    case "order": case "sale": return settings.orders !== false;
-    case "offer":            return settings.offers !== false;
-    case "rating":           return settings.ratings !== false;
-    case "follow":           return settings.follows !== false;
-    case "kyc":              return true;
-    default:                 return settings.general !== false;
+  switch (type.toLowerCase()) {
+    case "message":                     return settings.messages !== false;
+    case "order": case "order_update": return settings.orders !== false;
+    case "offer":                       return settings.offers !== false;
+    case "rating": case "review":       return settings.ratings !== false;
+    case "follow":                      return settings.follows !== false;
+    case "kyc": case "system":          return true;
+    default:                            return settings.general !== false;
   }
 }
 
 function getChannelId(type: string): string {
-  switch (type) {
-    case "message":           return "sdd_messages";
-    case "order": case "sale": return "sdd_orders";
-    case "offer":             return "sdd_offers";
-    case "rating":            return "sdd_ratings";
-    default:                  return "sdd_general";
+  switch (type.toLowerCase()) {
+    case "message":                     return "sdd_messages";
+    case "order": case "order_update":  return "sdd_orders";
+    case "offer":                       return "sdd_offers";
+    case "rating": case "review":       return "sdd_ratings";
+    default:                            return "sdd_general";
   }
 }
