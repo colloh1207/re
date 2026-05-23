@@ -435,6 +435,28 @@ fun SddNavGraph() {
         composable(Screen.ReportBug.route) { ReportBugScreen(navController) }
         composable(Screen.RateApp.route) { RateAppScreen(navController) }
 
+        composable(
+            Screen.Boost.route,
+            arguments = listOf(
+                navArgument("productId") { type = NavType.StringType; defaultValue = "" }
+            )
+        ) { back ->
+            val productId = back.arguments?.getString("productId") ?: ""
+            if (!authState.isAuthenticated) {
+                LoginRequiredScreen { navController.navigate(Screen.Login.route) }
+            } else {
+                com.sdd.marketplace.feature.boost.ui.BoostScreen(
+                    preSelectedProductId = productId.takeIf { it.isNotBlank() },
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateHome = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Boost.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+        }
+
         composable(Screen.BlockedUsers.route) {
             if (!authState.isAuthenticated) {
                 LoginRequiredScreen { navController.navigate(Screen.Login.route) }
