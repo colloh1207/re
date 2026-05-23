@@ -104,6 +104,12 @@ private fun LivenessCameraContent(
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
 
+    // Per-session counters — scoped to this composable instance, not file-level
+    var blinkFrames     by remember { mutableIntStateOf(0) }
+    var smileFrames     by remember { mutableIntStateOf(0) }
+    var turnLeftFrames  by remember { mutableIntStateOf(0) }
+    var turnRightFrames by remember { mutableIntStateOf(0) }
+
     DisposableEffect(Unit) {
         onDispose {
             faceDetector.close()
@@ -138,7 +144,17 @@ private fun LivenessCameraContent(
                         .addOnSuccessListener { faces ->
                             if (faces.isNotEmpty()) {
                                 val face = faces.first()
-                                handleFaceDetection(face, currentStep) { newStep, progress ->
+                                handleFaceDetection(
+                                    face, currentStep,
+                                    getBlinkFrames     = { blinkFrames },
+                                    setBlinkFrames     = { blinkFrames = it },
+                                    getSmileFrames     = { smileFrames },
+                                    setSmileFrames     = { smileFrames = it },
+                                    getTurnLeftFrames  = { turnLeftFrames },
+                                    setTurnLeftFrames  = { turnLeftFrames = it },
+                                    getTurnRightFrames = { turnRightFrames },
+                                    setTurnRightFrames = { turnRightFrames = it }
+                                ) { newStep, progress ->
                                     stepProgress = progress
                                     if (progress >= 1f) currentStep = newStep
                                 }
@@ -225,82 +241,64 @@ private fun LivenessCameraContent(
     }
 }
 
-private var blinkFrames = 0
-private var smileFrames = 0
-private var turnLeftFrames = 0
-private var turnRightFrames = 0
 private const val REQUIRED_FRAMES = 8
 
 private fun handleFaceDetection(
     face: Face,
     step: LivenessStep,
+    getBlinkFrames: () -> Int,     setBlinkFrames: (Int) -> Unit,
+    getSmileFrames: () -> Int,     setSmileFrames: (Int) -> Unit,
+    getTurnLeftFrames: () -> Int,  setTurnLeftFrames: (Int) -> Unit,
+    getTurnRightFrames: () -> Int, setTurnRightFrames: (Int) -> Unit,
     onProgress: (LivenessStep, Float) -> Unit
 ) {
     when (step) {
         LivenessStep.WAITING_FACE -> {
-            if (face.boundingBox.width() > 100) {
-                onProgress(LivenessStep.BLINK, 0f)
-            }
+            if (face.boundingBox.width() > 100) onProgress(LivenessStep.BLINK, 0f)
         }
         LivenessStep.BLINK -> {
             val leftEye = face.leftEyeOpenProbability ?: 1f
             val rightEye = face.rightEyeOpenProbability ?: 1f
             if (leftEye < 0.2f && rightEye < 0.2f) {
-                blinkFrames++
-                val progress = blinkFrames.toFloat() / REQUIRED_FRAMES
-                if (blinkFrames >= REQUIRED_FRAMES) {
-                    blinkFrames = 0
-                    onProgress(LivenessStep.SMILE, 1f)
-                } else {
-                    onProgress(LivenessStep.BLINK, progress)
-                }
+                val n = getBlinkFrames() + 1
+                setBlinkFrames(n)
+                if (n >= REQUIRED_FRAMES) { setBlinkFrames(0); onProgress(LivenessStep.SMILE, 1f) }
+                else onProgress(LivenessStep.BLINK, n.toFloat() / REQUIRED_FRAMES)
             } else {
-                blinkFrames = maxOf(0, blinkFrames - 1)
+                setBlinkFrames(maxOf(0, getBlinkFrames() - 1))
             }
         }
         LivenessStep.SMILE -> {
             val smile = face.smilingProbability ?: 0f
             if (smile > 0.7f) {
-                smileFrames++
-                val progress = smileFrames.toFloat() / REQUIRED_FRAMES
-                if (smileFrames >= REQUIRED_FRAMES) {
-                    smileFrames = 0
-                    onProgress(LivenessStep.TURN_LEFT, 1f)
-                } else {
-                    onProgress(LivenessStep.SMILE, progress)
-                }
+                val n = getSmileFrames() + 1
+                setSmileFrames(n)
+                if (n >= REQUIRED_FRAMES) { setSmileFrames(0); onProgress(LivenessStep.TURN_LEFT, 1f) }
+                else onProgress(LivenessStep.SMILE, n.toFloat() / REQUIRED_FRAMES)
             } else {
-                smileFrames = maxOf(0, smileFrames - 1)
+                setSmileFrames(maxOf(0, getSmileFrames() - 1))
             }
         }
         LivenessStep.TURN_LEFT -> {
             val yaw = face.headEulerAngleY
             if (yaw < -20f) {
-                turnLeftFrames++
-                val progress = turnLeftFrames.toFloat() / REQUIRED_FRAMES
-                if (turnLeftFrames >= REQUIRED_FRAMES) {
-                    turnLeftFrames = 0
-                    onProgress(LivenessStep.TURN_RIGHT, 1f)
-                } else {
-                    onProgress(LivenessStep.TURN_LEFT, progress)
-                }
+                val n = getTurnLeftFrames() + 1
+                setTurnLeftFrames(n)
+                if (n >= REQUIRED_FRAMES) { setTurnLeftFrames(0); onProgress(LivenessStep.TURN_RIGHT, 1f) }
+                else onProgress(LivenessStep.TURN_LEFT, n.toFloat() / REQUIRED_FRAMES)
             } else {
-                turnLeftFrames = maxOf(0, turnLeftFrames - 1)
+                setTurnLeftFrames(maxOf(0, getTurnLeftFrames() - 1))
             }
         }
         LivenessStep.TURN_RIGHT -> {
             val yaw = face.headEulerAngleY
             if (yaw > 20f) {
-                turnRightFrames++
-                val progress = turnRightFrames.toFloat() / REQUIRED_FRAMES
-                if (turnRightFrames >= REQUIRED_FRAMES) {
-                    turnRightFrames = 0
-                    onProgress(LivenessStep.COMPLETE, 1f)
-                } else {
-                    onProgress(LivenessStep.TURN_RIGHT, progress)
-                }
+                val n = getTurnRightFrames() + 1
+                setTurnRightFrames(n)
+                if (n >= REQUIRED_FRAMES) { setTurnRightFrames(0); onProgress(LivenessStep.COMPLETE, 1f) }
+                else onProgress(LivenessStep.TURN_RIGHT, n.toFloat() / REQUIRED_FRAMES)
             } else {
-                turnRightFrames = maxOf(0, turnRightFrames - 1)
+                setTurnRightFrames(maxOf(0, getTurnRightFrames() - 1))
             }
         }
         LivenessStep.COMPLETE -> {}

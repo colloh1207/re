@@ -27,7 +27,8 @@ class SddFirebaseMessagingService : FirebaseMessagingService() {
     @Inject lateinit var auth: Auth
     @Inject lateinit var postgrest: Postgrest
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(serviceJob + Dispatchers.IO)
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
@@ -153,7 +154,7 @@ class SddFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        serviceScope.coroutineContext[SupervisorJob]?.cancel()
+        serviceJob.cancel()
     }
 
     companion object {
