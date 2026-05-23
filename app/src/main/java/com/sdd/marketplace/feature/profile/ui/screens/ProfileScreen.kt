@@ -376,7 +376,8 @@ fun ProfileScreen(
                                             onEdit = { navController.navigate(Screen.EditProduct.createRoute(product.id)) },
                                             onDelete = { viewModel.deleteProduct(product.id) },
                                             onMarkSold = { viewModel.markAsSold(product.id) },
-                                            onArchive = { viewModel.archiveProduct(product.id) }
+                                            onArchive = { viewModel.archiveProduct(product.id) },
+                                            onBoost = { navController.navigate(Screen.Boost.createRoute(product.id)) }
                                         )
                                     }
                                 }
@@ -487,7 +488,7 @@ fun StatCard(label: String, value: String, sub: String, color: Color, modifier: 
 }
 
 @Composable
-fun ProfileProductCard(product: Product, isOwner: Boolean, onClick: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onMarkSold: () -> Unit, onArchive: () -> Unit) {
+fun ProfileProductCard(product: Product, isOwner: Boolean, onClick: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onMarkSold: () -> Unit, onArchive: () -> Unit, onBoost: () -> Unit = {}) {
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -522,6 +523,11 @@ fun ProfileProductCard(product: Product, isOwner: Boolean, onClick: () -> Unit, 
                             DropdownMenuItem(leadingIcon = { Icon(Icons.Outlined.Edit, "Edit", tint = SddPink) }, text = { Text("Edit", color = SddPink) }, onClick = { showMenu = false; onEdit() })
                             if (!product.isSold) {
                                 DropdownMenuItem(leadingIcon = { Icon(Icons.Outlined.CheckCircle, "Sold", tint = SuccessGreen) }, text = { Text("Mark as Sold", color = SuccessGreen) }, onClick = { showMenu = false; onMarkSold() })
+                                DropdownMenuItem(
+                                    leadingIcon = { Icon(Icons.Filled.Rocket, "Boost", tint = androidx.compose.ui.graphics.Color(0xFFFF9800)) },
+                                    text = { Text("Boost Listing", color = androidx.compose.ui.graphics.Color(0xFFFF9800)) },
+                                    onClick = { showMenu = false; onBoost() }
+                                )
                             }
                             DropdownMenuItem(leadingIcon = { Icon(Icons.Outlined.Archive, "Archive") }, text = { Text("Archive") }, onClick = { showMenu = false; onArchive() })
                             DropdownMenuItem(leadingIcon = { Icon(Icons.Outlined.Delete, "Delete", tint = MaterialTheme.colorScheme.error) }, text = { Text("Delete", color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; showDeleteConfirm = true })

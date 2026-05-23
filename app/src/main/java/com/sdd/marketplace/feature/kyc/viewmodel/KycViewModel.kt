@@ -19,7 +19,9 @@ data class KycUiState(
     val selectedDocType: KycDocumentType = KycDocumentType.NATIONAL_ID,
     val frontImageUri: Uri? = null,
     val backImageUri: Uri? = null,
-    val selfieUri: Uri? = null
+    val selfieUri: Uri? = null,
+    val showLivenessCamera: Boolean = false,
+    val livenessCompleted: Boolean = false
 )
 
 sealed class KycEvent {
@@ -47,13 +49,35 @@ class KycViewModel @Inject constructor(private val kycRepository: KycRepository)
     fun selectDocType(type: KycDocumentType) = _uiState.update { it.copy(selectedDocType = type) }
     fun setFrontImage(uri: Uri) = _uiState.update { it.copy(frontImageUri = uri) }
     fun setBackImage(uri: Uri) = _uiState.update { it.copy(backImageUri = uri) }
-    fun setSelfieImage(uri: Uri) = _uiState.update { it.copy(selfieUri = uri) }
+    fun setSelfieImage(uri: Uri) = _uiState.update { it.copy(selfieUri = uri, livenessCompleted = true) }
     fun nextStep() = _uiState.update { it.copy(step = it.step + 1) }
     fun prevStep() = _uiState.update { if (it.step > 0) it.copy(step = it.step - 1) else it }
+
+    fun startLivenessCheck() = _uiState.update { it.copy(showLivenessCamera = true) }
+
+    fun onLivenessComplete(uri: Uri) {
+        _uiState.update { it.copy(
+            selfieUri = uri,
+            livenessCompleted = true,
+            showLivenessCamera = false
+        )}
+    }
+
+    fun onLivenessCancelled() = _uiState.update { it.copy(showLivenessCamera = false) }
+
+    fun retakeLiveness() = _uiState.update { it.copy(
+        selfieUri = null,
+        livenessCompleted = false,
+        showLivenessCamera = true
+    )}
 
     fun submitKyc() = viewModelScope.launch {
         val state = _uiState.value
         val frontUri = state.frontImageUri ?: return@launch
+        if (!state.livenessCompleted || state.selfieUri == null) {
+            _uiState.update { it.copy(error = "Please complete the liveness check before submitting.") }
+            return@launch
+        }
         _uiState.update { it.copy(isLoading = true, error = null) }
         val docs = mutableListOf(Pair(state.selectedDocType, frontUri))
         state.backImageUri?.let { docs.add(Pair(state.selectedDocType, it)) }

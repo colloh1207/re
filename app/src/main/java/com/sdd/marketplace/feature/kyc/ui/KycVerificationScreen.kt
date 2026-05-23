@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,14 @@ fun KycVerificationScreen(navController: NavController, viewModel: KycViewModel 
                 }
             }
         }
+    }
+
+    if (uiState.showLivenessCamera) {
+        LivenessCameraScreen(
+            onComplete = { uri -> viewModel.onLivenessComplete(uri) },
+            onCancel = { viewModel.onLivenessCancelled() }
+        )
+        return
     }
 
     Scaffold(
@@ -74,7 +83,7 @@ fun KycStatusCard(submission: KycSubmission) {
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         val (icon, color) = when (submission.status) {
             KycStatus.PENDING -> Pair(Icons.Outlined.HourglassTop, SddPink)
-            KycStatus.APPROVED -> Pair(Icons.Filled.Verified, androidx.compose.ui.graphics.Color(0xFF4CAF50))
+            KycStatus.APPROVED -> Pair(Icons.Filled.Verified, Color(0xFF4CAF50))
             KycStatus.REJECTED -> Pair(Icons.Filled.Cancel, MaterialTheme.colorScheme.error)
             else -> Pair(Icons.Outlined.Info, MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -89,7 +98,8 @@ fun KycStatusCard(submission: KycSubmission) {
                 KycStatus.REJECTED -> "Your submission was rejected. ${submission.rejectionReason ?: "Please resubmit with valid documents."}"
                 else -> ""
             },
-            color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
     }
 }
@@ -102,11 +112,7 @@ fun KycStepContent(step: Int, uiState: com.sdd.marketplace.feature.kyc.viewmodel
     val backLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { viewModel.setBackImage(it) }
     }
-    val selfieLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { viewModel.setSelfieImage(it) }
-    }
 
-    // Progress indicator
     LinearProgressIndicator(
         progress = { (step + 1).toFloat() / 3f },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
@@ -118,7 +124,7 @@ fun KycStepContent(step: Int, uiState: com.sdd.marketplace.feature.kyc.viewmodel
     when (step) {
         0 -> PersonalInfoStep(uiState, viewModel)
         1 -> DocumentUploadStep(uiState, viewModel, frontLauncher, backLauncher)
-        2 -> SelfieStep(uiState, viewModel, selfieLauncher)
+        2 -> LivenessStep(uiState, viewModel)
     }
 }
 
@@ -194,7 +200,7 @@ fun DocumentUploadStep(
                 modifier = Modifier.weight(1f),
                 enabled = uiState.frontImageUri != null,
                 colors = ButtonDefaults.buttonColors(containerColor = SddPink)
-            ) { Text("Next: Selfie") }
+            ) { Text("Next: Liveness Check") }
         }
     }
 }
@@ -224,37 +230,113 @@ fun DocumentUploadBox(label: String, uri: android.net.Uri?, onUpload: () -> Unit
 }
 
 @Composable
-fun SelfieStep(
+fun LivenessStep(
     uiState: com.sdd.marketplace.feature.kyc.viewmodel.KycUiState,
-    viewModel: KycViewModel,
-    selfieLauncher: androidx.activity.result.ActivityResultLauncher<String>
+    viewModel: KycViewModel
 ) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-        Text("Take a Selfie", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Take a clear selfie to confirm your identity matches your documents.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        Text("Liveness Verification", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(
+            "We need to confirm you are a real person. Follow the on-screen instructions to complete the liveness check.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
         Spacer(Modifier.height(20.dp))
-        DocumentUploadBox("Your Selfie", uiState.selfieUri) { selfieLauncher.launch("image/*") }
-        Spacer(Modifier.height(16.dp))
-        listOf("Face clearly visible, no glasses or mask", "Good lighting, no flash", "Neutral background", "Same as your ID photo").forEach {
-            Row(Modifier.padding(vertical = 2.dp)) {
-                Icon(Icons.Filled.Check, "Check", tint = androidx.compose.ui.graphics.Color(0xFF4CAF50), modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(it, style = MaterialTheme.typography.bodySmall)
-            }
+
+        if (uiState.livenessCompleted && uiState.selfieUri != null) {
+            LivenessCompletedCard(selfieUri = uiState.selfieUri, onRetake = { viewModel.retakeLiveness() })
+        } else {
+            LivenessInstructions(onStartLiveness = { viewModel.startLivenessCheck() })
         }
+
         Spacer(Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = { viewModel.prevStep() }, modifier = Modifier.weight(1f)) { Text("Back") }
             Button(
                 onClick = { viewModel.submitKyc() },
                 modifier = Modifier.weight(1f),
-                enabled = !uiState.isLoading,
+                enabled = uiState.livenessCompleted && !uiState.isLoading,
                 colors = ButtonDefaults.buttonColors(containerColor = SddPink)
             ) {
-                if (uiState.isLoading) CircularProgressIndicator(Modifier.size(20.dp), color = androidx.compose.ui.graphics.Color.White)
+                if (uiState.isLoading) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White)
                 else Text("Submit for Review")
             }
         }
         uiState.error?.let { Spacer(Modifier.height(8.dp)); Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+}
+
+@Composable
+private fun LivenessInstructions(onStartLiveness: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SddPink.copy(alpha = 0.06f))
+    ) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("What you'll need to do:", fontWeight = FontWeight.SemiBold)
+            listOf(
+                Pair("👁️", "Blink your eyes slowly"),
+                Pair("😊", "Smile naturally"),
+                Pair("⬅️", "Turn your head to the left"),
+                Pair("➡️", "Turn your head to the right")
+            ).forEach { (emoji, instruction) ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(emoji, fontSize = 22.sp)
+                    Text(instruction, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            listOf("Good lighting, face visible", "Remove glasses and hat if possible", "Keep your face within the oval").forEach {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.Check, "", tint = Color(0xFF4CAF50), modifier = Modifier.size(16.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+    Spacer(Modifier.height(20.dp))
+    Button(
+        onClick = onStartLiveness,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = SddPink),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Icon(Icons.Filled.CameraAlt, "Camera", modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("Start Liveness Check", fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun LivenessCompletedCard(selfieUri: android.net.Uri, onRetake: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(
+            color = Color(0xFF4CAF50).copy(alpha = 0.1f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(Icons.Filled.CheckCircle, "Done", tint = Color(0xFF4CAF50), modifier = Modifier.size(28.dp))
+                Column {
+                    Text("Liveness check passed!", fontWeight = FontWeight.SemiBold, color = Color(0xFF4CAF50))
+                    Text("Your face has been verified successfully.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        Box(
+            Modifier.size(120.dp).clip(RoundedCornerShape(12.dp))
+                .border(2.dp, Color(0xFF4CAF50), RoundedCornerShape(12.dp))
+        ) {
+            AsyncImage(model = selfieUri, contentDescription = "Selfie", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Icon(Icons.Filled.Verified, "Verified", tint = Color(0xFF4CAF50), modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(24.dp))
+        }
+        TextButton(onClick = onRetake) {
+            Icon(Icons.Filled.Replay, "Retake", modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Retake liveness check")
+        }
     }
 }

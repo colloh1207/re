@@ -87,6 +87,32 @@ fun SettingsScreen(
                             colors = SwitchDefaults.colors(checkedThumbColor = SddPink, checkedTrackColor = SddPink.copy(alpha = 0.4f))
                         )
                     }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Offer Alerts", fontWeight = FontWeight.Medium)
+                            Text("Get notified when someone makes an offer", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = uiState.offersNotificationsEnabled && uiState.notificationsEnabled,
+                            onCheckedChange = { viewModel.toggleOffersNotifications(it) },
+                            enabled = uiState.notificationsEnabled,
+                            colors = SwitchDefaults.colors(checkedThumbColor = SddPink, checkedTrackColor = SddPink.copy(alpha = 0.4f))
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Reviews & Ratings", fontWeight = FontWeight.Medium)
+                            Text("Get notified when you receive a review", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = uiState.ratingsNotificationsEnabled && uiState.notificationsEnabled,
+                            onCheckedChange = { viewModel.toggleRatingsNotifications(it) },
+                            enabled = uiState.notificationsEnabled,
+                            colors = SwitchDefaults.colors(checkedThumbColor = SddPink, checkedTrackColor = SddPink.copy(alpha = 0.4f))
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -116,6 +142,9 @@ fun SettingsScreen(
                 }
                 SettingsItem(Icons.Outlined.SwitchAccount, "Switch Account", "Manage multiple accounts") {
                     navController.navigate(Screen.SwitchAccount.route)
+                }
+                SettingsItem(Icons.Outlined.Block, "Blocked Users", "Manage users you've blocked") {
+                    navController.navigate(Screen.BlockedUsers.route)
                 }
                 SettingsItem(Icons.Outlined.VerifiedUser, "KYC Verification", "Verify your identity to become a trusted seller") {
                     navController.navigate(Screen.KycVerification.route)

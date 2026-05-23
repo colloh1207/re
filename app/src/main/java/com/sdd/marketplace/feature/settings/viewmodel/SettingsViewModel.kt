@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sdd.marketplace.core.util.ErrorHandler
 import com.sdd.marketplace.core.util.NetworkChecker
+import com.sdd.marketplace.data.local.dao.AppPreferencesDao
+import com.sdd.marketplace.data.local.entities.AppPreferencesEntity
 import com.sdd.marketplace.domain.repository.AuthRepository
 import com.sdd.marketplace.domain.repository.BlockRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +23,8 @@ data class SettingsUiState(
     val notificationsEnabled: Boolean = true,
     val pushEnabled: Boolean = true,
     val emailNotificationsEnabled: Boolean = true,
+    val offersNotificationsEnabled: Boolean = true,
+    val ratingsNotificationsEnabled: Boolean = true,
     val darkModeEnabled: Boolean = false
 )
 
@@ -34,7 +38,8 @@ sealed class SettingsEvent {
 class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val blockRepository: BlockRepository,
-    private val networkChecker: NetworkChecker
+    private val networkChecker: NetworkChecker,
+    private val appPreferencesDao: AppPreferencesDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -45,6 +50,24 @@ class SettingsViewModel @Inject constructor(
 
     init {
         _uiState.update { it.copy(currentUserEmail = authRepository.getCurrentUserEmail()) }
+        loadNotificationPrefs()
+    }
+
+    private fun loadNotificationPrefs() = viewModelScope.launch {
+        val notif    = appPreferencesDao.get("notif_all") != "false"
+        val push     = appPreferencesDao.get("notif_push") != "false"
+        val email    = appPreferencesDao.get("notif_email") != "false"
+        val offers   = appPreferencesDao.get("notif_offers") != "false"
+        val ratings  = appPreferencesDao.get("notif_ratings") != "false"
+        _uiState.update {
+            it.copy(
+                notificationsEnabled = notif,
+                pushEnabled = push,
+                emailNotificationsEnabled = email,
+                offersNotificationsEnabled = offers,
+                ratingsNotificationsEnabled = ratings
+            )
+        }
     }
 
     fun sendPasswordResetOtp() = viewModelScope.launch {
@@ -132,14 +155,31 @@ class SettingsViewModel @Inject constructor(
 
     fun toggleNotifications(enabled: Boolean) {
         _uiState.update { it.copy(notificationsEnabled = enabled) }
+        savePref("notif_all", enabled)
     }
 
     fun togglePushNotifications(enabled: Boolean) {
         _uiState.update { it.copy(pushEnabled = enabled) }
+        savePref("notif_push", enabled)
     }
 
     fun toggleEmailNotifications(enabled: Boolean) {
         _uiState.update { it.copy(emailNotificationsEnabled = enabled) }
+        savePref("notif_email", enabled)
+    }
+
+    fun toggleOffersNotifications(enabled: Boolean) {
+        _uiState.update { it.copy(offersNotificationsEnabled = enabled) }
+        savePref("notif_offers", enabled)
+    }
+
+    fun toggleRatingsNotifications(enabled: Boolean) {
+        _uiState.update { it.copy(ratingsNotificationsEnabled = enabled) }
+        savePref("notif_ratings", enabled)
+    }
+
+    private fun savePref(key: String, value: Boolean) = viewModelScope.launch {
+        appPreferencesDao.set(AppPreferencesEntity(key, value.toString()))
     }
 
     fun rateApp(rating: Int, note: String) = viewModelScope.launch {
@@ -166,7 +206,11 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = false) }
     }
 
-    fun submitSupportRequest(subject: String, description: String, category: com.sdd.marketplace.domain.model.SupportCategory) = viewModelScope.launch {
+    fun submitSupportRequest(
+        subject: String,
+        description: String,
+        category: com.sdd.marketplace.domain.model.SupportCategory
+    ) = viewModelScope.launch {
         if (!networkChecker.isOnline()) {
             _uiState.update { it.copy(error = "No internet connection. Please try again when online.") }
             return@launch

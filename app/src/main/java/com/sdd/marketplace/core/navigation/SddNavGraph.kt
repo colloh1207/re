@@ -89,6 +89,11 @@ sealed class Screen(val route: String) {
             "payment_success/$orderId?amount=${java.net.URLEncoder.encode(amount, "UTF-8")}"
     }
     object KycApproved : Screen("kyc_approved")
+    object BlockedUsers : Screen("blocked_users")
+    object RateSeller : Screen("rate_seller/{sellerId}/{sellerName}/{productId}") {
+        fun createRoute(sellerId: String, sellerName: String, productId: String) =
+            "rate_seller/$sellerId/${java.net.URLEncoder.encode(sellerName, "UTF-8")}/$productId"
+    }
 }
 
 val bottomNavItems = listOf(
@@ -429,6 +434,29 @@ fun SddNavGraph() {
         composable(Screen.HelpSupport.route) { HelpSupportScreen(navController) }
         composable(Screen.ReportBug.route) { ReportBugScreen(navController) }
         composable(Screen.RateApp.route) { RateAppScreen(navController) }
+
+        composable(Screen.BlockedUsers.route) {
+            if (!authState.isAuthenticated) {
+                LoginRequiredScreen { navController.navigate(Screen.Login.route) }
+            } else {
+                com.sdd.marketplace.feature.settings.ui.screens.BlockedUsersScreen(navController)
+            }
+        }
+
+        composable(
+            Screen.RateSeller.route,
+            arguments = listOf(
+                navArgument("sellerId")   { type = NavType.StringType },
+                navArgument("sellerName") { type = NavType.StringType; defaultValue = "Seller" },
+                navArgument("productId")  { type = NavType.StringType; defaultValue = "" }
+            )
+        ) {
+            if (!authState.isAuthenticated) {
+                LoginRequiredScreen { navController.navigate(Screen.Login.route) }
+            } else {
+                com.sdd.marketplace.feature.review.ui.RateSellerScreen(navController)
+            }
+        }
 
         composable(
             Screen.Followers.route,
