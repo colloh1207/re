@@ -1,0 +1,94 @@
+Fix the authentication and profile creation flow in my Supabase app.
+
+Current issue:
+
+* Users can sign up successfully
+* They are redirected to the main app immediately
+* No profile row exists in public.users
+* Name and username are missing
+* Users behave like guests and cannot edit profiles or perform authenticated actions
+* Profile update requests fail due to missing user records and RLS issues
+
+Required corrections:
+
+1. After signup, ensure a valid authenticated session exists before redirecting users to Home.
+
+2. Automatically create a profile row in public.users whenever a new auth user is created.
+
+3. Use a Supabase PostgreSQL trigger on auth.users to generate profile data automatically.
+
+4. Generate:
+
+   * username automatically from email prefix
+   * full_name automatically from email prefix
+   * ensure username uniqueness by appending random digits
+
+Example:
+email: [johnsmith@gmail.com](mailto:johnsmith@gmail.com)
+generated username: johnsmith4821
+generated full_name: Johnsmith
+
+5. Create or update the public.users table structure:
+
+* id UUID PRIMARY KEY referencing auth.users(id)
+* email TEXT UNIQUE
+* username TEXT UNIQUE
+* full_name TEXT
+* avatar_url TEXT
+* created_at TIMESTAMPTZ DEFAULT now()
+
+6. Enable Row Level Security on public.users.
+
+7. Add RLS policies so authenticated users can:
+
+   * insert their own profile
+   * view their own profile
+   * update their own profile
+
+8. Ensure auth.uid() matches users.id in all policies.
+
+9. Prevent redirecting to Home until:
+
+   * session exists
+   * profile row exists successfully
+
+10. After login/signup:
+
+* fetch the user profile from public.users
+* store profile data in app state/context
+* avoid guest mode behavior
+
+11. Add proper error handling for:
+
+* missing profile
+* failed inserts
+* invalid session
+* RLS permission errors
+
+12. Fix the profile edit/update flow so authenticated users can successfully update:
+
+* username
+* full_name
+* privacy settings
+* avatar
+
+13. Remove insecure permission handling.
+    Do NOT use unrestricted GRANT UPDATE ON public.users TO authenticated without RLS protection.
+
+14. Ensure the app works correctly after email verification and session refresh.
+
+15. Add loading states while checking:
+
+* auth session
+* profile existence
+* onboarding completion
+
+Goal:
+Users should be able to:
+
+* sign up
+* verify email
+* automatically receive a generated profile
+* enter the app fully authenticated
+* edit their profile later without errors
+* never appear as guest users after authentication
